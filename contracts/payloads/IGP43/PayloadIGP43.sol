@@ -188,9 +188,7 @@ interface IFluidLiquidityAdmin {
         external
         returns (uint256[] memory supplyExchangePrices_, uint256[] memory borrowExchangePrices_);
 
-    function readFromStorage(
-        bytes32 slot_
-    ) external view returns (uint256 result_);
+    function readFromStorage(bytes32 slot_) external view returns (uint256 result_);
 }
 
 interface FluidDexReservesResolver {
@@ -220,10 +218,14 @@ interface FluidVaultFactory {
     /// @param vaultAuth_               The address to be set as vault authorization.
     /// @param allowed_                 A boolean indicating whether the specified address is allowed to update the specific vault config.
     function setVaultAuth(address vault_, address vaultAuth_, bool allowed_) external;
+
+    /// @notice                         Computes the address of a vault based on its given ID (`vaultId_`).
+    /// @param vaultId_                 The ID of the vault.
+    /// @return vault_                  Returns the computed address of the vault.
+    function getVaultAddress(uint256 vaultId_) external view returns (address vault_);
 }
 
 interface FluidVault {
-    
     struct ConstantViews {
         address liquidity;
         address factory;
@@ -289,7 +291,8 @@ contract PayloadIGP43 {
 
     address public constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-    FluidDexReservesResolver public constant DEX_RESERVES_RESOLVER = FluidDexReservesResolver(0x278166A9B88f166EB170d55801bE1b1d1E576330);
+    FluidDexReservesResolver public constant DEX_RESERVES_RESOLVER =
+        FluidDexReservesResolver(0x278166A9B88f166EB170d55801bE1b1d1E576330);
 
     FluidVaultFactory public constant VAULT_FACTORY = FluidVaultFactory(0x324c5Dc1fC42c7a4D43d92df1eBA58a54d13Bf2d);
 
@@ -299,21 +302,20 @@ contract PayloadIGP43 {
     address internal constant weETH_ADDRESS = 0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee;
     address internal constant cbBTC_ADDRESS = 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf;
 
-
     address public constant wstETH_ETH_Dex = 0x6d83f60eEac0e50A1250760151E81Db2a278e03a;
     address public constant USDC_USDT_Dex = 0x5014E47Ca35eC6963985736846a4bCcd68Fab2F2;
     address public constant cbBTC_WBTC_Dex = 0x77545D43dFb6F12f5c19034E2a3167e18265F392;
 
-    address public constant wstETH_ETH_SMART_COL_DEBT = 0x57fed7c9b3c763999c519264931790cBcA331417;
-    address public constant ETH_USDC_USDT = 0xB58634A962A579bD01c392451a718cB5d74DfB53;
-    address public constant wstETH_USDC_USDT = 0xA9FF23CfF9439c418DA08CE7954a92E46311761e;
-    address public constant weETH_USDC_USDT = 0xB9Bb0b2354884B4B9dBDDaeb01feEcf507695e33;
-    address public constant WBTC_USDC_USDT = 0x2d38ca861aC948BF90cC682fC1455138173c1923;
-    address public constant cbBTC_USDC_USDT = 0x5896d226882CEdd99eA30d25DbC5025B5706144b;
-    address public constant sUSDe_USDC_USDT = 0x274D1171F06E976a4f545E6d4bf017bEDC51F752;
-    address public constant cbBTC_WBTC_SMART_COL_DEBT =  0x97950bF81f5605d2d0be37f28a33A752D6f16BDF;
-    address public constant cbBTC_WBTC_USDC = 0x5eb4ba0C320B59f825cc8D2291f672247Aa5D06F;
-    address public constant cbBTC_WBTC_USDT = 0xD173A445Fa0584eC76ac4abab50FfA39ABa5448C;
+    address public immutable wstETH_ETH_SMART_COL_DEBT = getVaultAddress(34);
+    address public immutable ETH_USDC_USDT = getVaultAddress(35);
+    address public immutable wstETH_USDC_USDT = getVaultAddress(36);
+    address public immutable weETH_USDC_USDT = getVaultAddress(37);
+    address public immutable WBTC_USDC_USDT = getVaultAddress(38);
+    address public immutable cbBTC_USDC_USDT = getVaultAddress(39);
+    address public immutable sUSDe_USDC_USDT = getVaultAddress(40);
+    address public immutable cbBTC_WBTC_SMART_COL_DEBT = getVaultAddress(41);
+    address public immutable cbBTC_WBTC_USDC = getVaultAddress(42);
+    address public immutable cbBTC_WBTC_USDT = getVaultAddress(43);
 
     constructor() {
         ADDRESS_THIS = address(this);
@@ -351,6 +353,10 @@ contract PayloadIGP43 {
 
     function verifyProposal() external view {}
 
+    function getVaultAddress(uint256 id) internal view returns (address) {
+        return VAULT_FACTORY.getVaultAddress(id);
+    }
+
     /**
      * |
      * |     Proposal Payload Actions      |
@@ -360,25 +366,15 @@ contract PayloadIGP43 {
     /// @notice Action 1: Setting supply and borrow limit for Dexes
     function action1(TokenConfig memory token0Config_, TokenConfig memory token1Config_) internal {
         FluidDexReservesResolver.Pool memory pool1_ = DEX_RESERVES_RESOLVER.getPool(1);
-        setSupplyConfigforDex(
-            wstETH_ETH_Dex, pool1_.token0, pool1_.token1, token0Config_, token1Config_
-        );
-        setBorrowConfigforDex(
-            wstETH_ETH_Dex, pool1_.token0, pool1_.token1, token0Config_, token1Config_
-        );
+        setSupplyConfigforDex(wstETH_ETH_Dex, pool1_.token0, pool1_.token1, token0Config_, token1Config_);
+        setBorrowConfigforDex(wstETH_ETH_Dex, pool1_.token0, pool1_.token1, token0Config_, token1Config_);
 
         FluidDexReservesResolver.Pool memory pool2_ = DEX_RESERVES_RESOLVER.getPool(2);
-        setBorrowConfigforDex(
-            USDC_USDT_Dex, pool2_.token0, pool2_.token1, token0Config_, token1Config_
-        );
+        setBorrowConfigforDex(USDC_USDT_Dex, pool2_.token0, pool2_.token1, token0Config_, token1Config_);
 
         FluidDexReservesResolver.Pool memory pool3_ = DEX_RESERVES_RESOLVER.getPool(3);
-        setSupplyConfigforDex(
-            cbBTC_WBTC_Dex, pool3_.token0, pool3_.token1, token0Config_, token1Config_
-        );
-        setBorrowConfigforDex(
-            cbBTC_WBTC_Dex, pool3_.token0, pool3_.token1, token0Config_, token1Config_
-        );
+        setSupplyConfigforDex(cbBTC_WBTC_Dex, pool3_.token0, pool3_.token1, token0Config_, token1Config_);
+        setBorrowConfigforDex(cbBTC_WBTC_Dex, pool3_.token0, pool3_.token1, token0Config_, token1Config_);
     }
 
     /// @notice Action 2: Setting team multisig as vault auth in 10 vaults
